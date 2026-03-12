@@ -258,6 +258,8 @@
 
     <div class="panel">
       <h2>Top-Level Node</h2>
+      <label for="nodeSearch">Search Design (Level 1)</label>
+      <input id="nodeSearch" type="search" placeholder="Search by page, node name, or type" />
       <label for="nodeSelect">Select Design (Level 1)</label>
       <select id="nodeSelect"></select>
       <p class="hint" id="nodeMeta">Loading nodes...</p>
@@ -466,6 +468,7 @@
 
       const state = {
         nodes: [],
+        nodeSearchTerm: "",
         selectedNodeId: null,
         audiences: [],
         klaviyoAccounts: [],
@@ -479,6 +482,7 @@
       };
 
       const els = {
+        nodeSearch: document.getElementById("nodeSearch"),
         nodeSelect: document.getElementById("nodeSelect"),
         nodeMeta: document.getElementById("nodeMeta"),
         detectButtons: document.getElementById("detectButtons"),
@@ -605,8 +609,40 @@
         renderButtonsList();
       }
 
-      function populateNodes(nodes) {
-        state.nodes = nodes || [];
+      function sortNodesAlphabetically(nodes) {
+        const sorted = Array.isArray(nodes) ? [...nodes] : [];
+        sorted.sort((left, right) => {
+          const leftLabel = String(left && left.label ? left.label : "");
+          const rightLabel = String(right && right.label ? right.label : "");
+          return leftLabel.localeCompare(rightLabel, undefined, {
+            sensitivity: "base",
+            numeric: true
+          });
+        });
+        return sorted;
+      }
+
+      function filterNodesBySearch(nodes, searchTerm) {
+        const query = String(searchTerm || "").trim().toLowerCase();
+        if (!query) {
+          return nodes;
+        }
+        return nodes.filter((node) => {
+          const haystack = [
+            node.label,
+            node.pageName,
+            node.nodeName,
+            node.type
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+          return haystack.includes(query);
+        });
+      }
+
+      function renderNodeOptions() {
+        const filteredNodes = filterNodesBySearch(state.nodes, state.nodeSearchTerm);
         els.nodeSelect.innerHTML = "";
 
         if (!state.nodes.length) {
@@ -614,6 +650,7 @@
           option.value = "";
           option.textContent = "No top-level nodes";
           els.nodeSelect.appendChild(option);
+          state.selectedNodeId = null;
           els.nodeMeta.textContent = "No level-1 nodes were found.";
           setStatus("No nodes to process.", "error");
           resetButtonsPanel();
@@ -621,19 +658,33 @@
           return;
         }
 
-        for (const node of state.nodes) {
+        if (!filteredNodes.length) {
+          const option = document.createElement("option");
+          option.value = "";
+          option.textContent = "No nodes match search";
+          els.nodeSelect.appendChild(option);
+          els.nodeSelect.value = "";
+          els.nodeMeta.textContent = `No level-1 nodes match "${state.nodeSearchTerm}".`;
+          return;
+        }
+
+        for (const node of filteredNodes) {
           const option = document.createElement("option");
           option.value = node.id;
           option.textContent = `${node.label} (${node.type}${node.width && node.height ? ` ${node.width}x${node.height}` : ""})`;
           els.nodeSelect.appendChild(option);
         }
 
-        if (!state.selectedNodeId || !state.nodes.some((n) => n.id === state.selectedNodeId)) {
-          state.selectedNodeId = state.nodes[0].id;
-        }
-
-        els.nodeSelect.value = state.selectedNodeId;
+        const hasCurrentSelection = Boolean(
+          state.selectedNodeId && filteredNodes.some((node) => node.id === state.selectedNodeId)
+        );
+        els.nodeSelect.value = hasCurrentSelection ? state.selectedNodeId : filteredNodes[0].id;
         updateNodeMeta();
+      }
+
+      function populateNodes(nodes) {
+        state.nodes = sortNodesAlphabetically(nodes || []);
+        renderNodeOptions();
       }
 
       function updateNodeMeta() {
@@ -1659,6 +1710,11 @@
         els.refreshNodes.addEventListener("click", () => {
           setStatus("Loading top-level nodes...", null);
           postPluginMessage("nodes:request");
+        });
+
+        els.nodeSearch.addEventListener("input", () => {
+          state.nodeSearchTerm = String(els.nodeSearch.value || "");
+          renderNodeOptions();
         });
 
         els.nodeSelect.addEventListener("change", () => {
