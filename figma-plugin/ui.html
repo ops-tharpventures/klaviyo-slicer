@@ -1,0 +1,1875 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Figma to Klaviyo Cutter</title>
+    <style>
+      :root {
+        --bg: #f4efe7;
+        --panel: #fffdf9;
+        --ink: #15202b;
+        --muted: #5f6770;
+        --line: #d8ccb7;
+        --accent: #0d7c66;
+        --accent-ink: #f8fff5;
+        --danger: #8f2533;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 14px;
+        background: radial-gradient(circle at top right, #fff7e6 0%, var(--bg) 42%, #efe4d6 100%);
+        color: var(--ink);
+        font-family: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
+      }
+
+      h1 {
+        margin: 0 0 10px;
+        font-size: 17px;
+        line-height: 1.2;
+      }
+
+      h2 {
+        margin: 0 0 8px;
+        font-size: 13px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 10px;
+        margin-bottom: 10px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      label {
+        display: block;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 4px;
+        color: var(--muted);
+      }
+
+      input,
+      select,
+      button {
+        width: 100%;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        font: inherit;
+        color: var(--ink);
+        background: #fff;
+      }
+
+      input,
+      select {
+        padding: 8px;
+        font-size: 12px;
+      }
+
+      button {
+        padding: 8px;
+        font-size: 12px;
+        cursor: pointer;
+        background: #fff;
+      }
+
+      button.primary {
+        border-color: #0b6957;
+        background: var(--accent);
+        color: var(--accent-ink);
+        font-weight: 600;
+      }
+
+      button.secondary {
+        border-color: #35637a;
+        color: #11354c;
+        background: #edf7ff;
+      }
+
+      button.ghost {
+        background: transparent;
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+
+      .status {
+        font-size: 12px;
+        line-height: 1.35;
+        margin: 0;
+      }
+
+      .status.error {
+        color: var(--danger);
+      }
+
+      .status.ok {
+        color: #166534;
+      }
+
+      .hint {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .cuts {
+        display: grid;
+        gap: 8px;
+        max-height: 280px;
+        overflow: auto;
+      }
+
+      .cut {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 6px;
+        display: grid;
+        grid-template-columns: 92px 1fr;
+        gap: 6px;
+        align-items: start;
+      }
+
+      .cut img {
+        width: 92px;
+        border: 1px solid #d4d4d4;
+        border-radius: 6px;
+        display: block;
+      }
+
+      .cut small {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .cut-fields {
+        margin-top: 6px;
+        display: grid;
+        gap: 6px;
+      }
+
+      .cut-fields label {
+        margin-bottom: 2px;
+      }
+
+      .mini-actions {
+        display: flex;
+        gap: 6px;
+      }
+
+      .mini-actions button {
+        flex: 1;
+      }
+
+      .mono {
+        font-family: "IBM Plex Mono", Menlo, Monaco, monospace;
+      }
+
+      .buttons-list {
+        margin-top: 8px;
+        max-height: 260px;
+        overflow: auto;
+        display: grid;
+        gap: 6px;
+      }
+
+      .button-row {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 8px;
+      }
+
+      .button-row-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .button-name {
+        font-size: 12px;
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .button-meta {
+        font-size: 11px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      .button-margins {
+        margin-top: 6px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+      }
+
+      .mode-options {
+        margin-top: 6px;
+        display: flex;
+        gap: 8px;
+      }
+
+      .mode-option {
+        flex: 1;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 8px;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--ink);
+        cursor: pointer;
+      }
+
+      .mode-option input[type="radio"] {
+        width: auto;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Figma to Klaviyo Cutter</h1>
+
+    <div class="panel">
+      <h2>Top-Level Node</h2>
+      <label for="nodeSelect">Select Design (Level 1)</label>
+      <select id="nodeSelect"></select>
+      <p class="hint" id="nodeMeta">Loading nodes...</p>
+      <div class="mini-actions" style="margin-top: 8px;">
+        <button id="refreshNodes" class="ghost">Refresh</button>
+        <button id="detectButtons" class="secondary">Detect Buttons</button>
+        <button id="closePlugin" class="ghost">Close</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Buttons</h2>
+      <p class="hint">Dedicated panel to detect buttons and set safety margins per button.</p>
+      <div style="margin-top: 8px;">
+        <label for="buttonKeywords">Button Match Tokens (contains)</label>
+        <input id="buttonKeywords" value="button, btn, cta" placeholder="button, btn, cta" />
+        <p class="hint">If a layer name contains any token, it is treated as a button. For custom tokens, use mt=/mb=/m= for name-based margins.</p>
+      </div>
+      <div class="grid" style="margin-top: 8px;">
+        <div>
+          <label for="bulkMarginTop">Top Margin For All (Figma px)</label>
+          <input id="bulkMarginTop" type="number" min="0" value="12" />
+        </div>
+        <div>
+          <label for="bulkMarginBottom">Bottom Margin For All (Figma px)</label>
+          <input id="bulkMarginBottom" type="number" min="0" value="12" />
+        </div>
+      </div>
+      <div class="mini-actions" style="margin-top: 8px;">
+        <button id="applyMarginsAll" class="ghost" disabled>Apply Margins To All</button>
+      </div>
+      <p class="hint" id="buttonsSummary">No buttons detected.</p>
+      <div id="buttonsList" class="buttons-list"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Cut Rules</h2>
+      <div class="grid">
+        <div>
+          <label for="maxHeight">Max Height Per Slice (exported image px)</label>
+          <input id="maxHeight" type="number" value="1400" min="1" />
+        </div>
+        <div>
+          <label for="exportScale">Export Scale</label>
+          <select id="exportScale">
+            <option value="1">1x</option>
+            <option value="1.5">1.5x</option>
+            <option value="2" selected>2x</option>
+            <option value="3">3x</option>
+            <option value="4">4x</option>
+          </select>
+        </div>
+      </div>
+      <p class="hint">
+        Button detection uses the tokens configured in the Buttons panel.
+      </p>
+      <div class="mini-actions" style="margin-top: 8px;">
+        <button id="runExport" class="primary">Export + Generate Slices</button>
+        <button id="downloadZip" class="secondary" disabled>Download ZIP</button>
+      </div>
+      <div class="mini-actions" style="margin-top: 6px;">
+        <button id="downloadManifest" class="ghost" disabled>Download Manifest JSON</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Klaviyo (Proxy via Vercel)</h2>
+      <div class="grid">
+        <div>
+          <label for="proxyBaseUrl">Proxy Base URL</label>
+          <input id="proxyBaseUrl" placeholder="https://your-project.vercel.app" />
+        </div>
+        <div>
+          <label for="proxySecret">Proxy Secret</label>
+          <input id="proxySecret" type="password" placeholder="Set PROXY_SHARED_SECRET value" />
+        </div>
+      </div>
+      <p class="hint">Use your deployed Vercel URL and the shared secret configured as PROXY_SHARED_SECRET.</p>
+      <div class="grid" style="grid-template-columns: 1fr 90px; margin-top: 8px; align-items: end;">
+        <div>
+          <label for="klaviyoAccount">Klaviyo Account</label>
+          <select id="klaviyoAccount">
+            <option value="">Default</option>
+          </select>
+        </div>
+        <div>
+          <button id="loadKlaviyoAccounts" class="ghost">Refresh</button>
+        </div>
+      </div>
+      <p class="hint">Loads Vercel env vars named `KLAVIYO_PRIVATE_API_KEY*`.</p>
+      <div class="grid" style="margin-top: 8px;">
+        <div>
+          <label for="emailWidth">Email Width (px)</label>
+          <input id="emailWidth" type="number" value="600" min="320" max="3000" />
+        </div>
+        <div>
+          <label for="deliveryScale">Delivery Scale</label>
+          <select id="deliveryScale">
+            <option value="1">1x</option>
+            <option value="2" selected>2x (retina)</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid" style="margin-top: 8px;">
+        <div>
+          <label for="outputFormat">Output Format</label>
+          <select id="outputFormat">
+            <option value="png" selected>PNG</option>
+            <option value="jpeg">JPEG</option>
+          </select>
+        </div>
+        <div>
+          <label for="jpegQuality">JPEG Quality</label>
+          <input id="jpegQuality" type="number" value="80" min="30" max="100" />
+        </div>
+      </div>
+
+      <div style="margin-top: 10px;">
+        <label for="templateName">Template Name</label>
+        <input id="templateName" value="Figma Import" />
+      </div>
+      <div style="margin-top: 8px;">
+        <label>Create In Klaviyo</label>
+        <div class="mode-options">
+          <label class="mode-option" for="modeTemplateOnly">
+            <input id="modeTemplateOnly" type="radio" name="klaviyoMode" value="template" checked />
+            Template Only
+          </label>
+          <label class="mode-option" for="modeTemplateCampaign">
+            <input id="modeTemplateCampaign" type="radio" name="klaviyoMode" value="campaign" />
+            Template + Draft Campaign
+          </label>
+        </div>
+      </div>
+      <div id="campaignFields" style="margin-top: 8px;">
+        <div>
+          <label for="campaignName">Campaign Name</label>
+          <input id="campaignName" value="Figma Import Campaign" />
+        </div>
+        <div class="grid" style="margin-top: 8px;">
+          <div>
+            <label for="audienceIncluded">Included Audience IDs</label>
+            <input id="audienceIncluded" placeholder="list-or-segment-id-1, id-2" />
+          </div>
+          <div>
+            <label for="audienceExcluded">Excluded Audience IDs (optional)</label>
+            <input id="audienceExcluded" placeholder="id-3, id-4" />
+          </div>
+        </div>
+        <div class="mini-actions" style="margin-top: 8px;">
+          <button id="loadAudiences" class="ghost">Load Audiences</button>
+        </div>
+        <div style="margin-top: 6px;">
+          <label for="audiencePicker">Available Audiences</label>
+          <select id="audiencePicker"></select>
+        </div>
+        <div class="mini-actions" style="margin-top: 6px;">
+          <button id="addAudienceIncluded" class="ghost" disabled>Add To Included</button>
+          <button id="addAudienceExcluded" class="ghost" disabled>Add To Excluded</button>
+        </div>
+        <p class="hint" id="audiencesHint">Load audiences through proxy to select IDs quickly.</p>
+        <div class="grid" style="margin-top: 8px;">
+          <div>
+            <label for="campaignSubject">Email Subject</label>
+            <input id="campaignSubject" placeholder="Your campaign subject" />
+          </div>
+          <div>
+            <label for="campaignPreviewText">Preview Text (optional)</label>
+            <input id="campaignPreviewText" placeholder="Preview text" />
+          </div>
+        </div>
+        <div class="grid" style="margin-top: 8px;">
+          <div>
+            <label for="fromEmail">From Email</label>
+            <input id="fromEmail" placeholder="hello@yourdomain.com" />
+          </div>
+          <div>
+            <label for="fromLabel">From Name</label>
+            <input id="fromLabel" placeholder="Brand Name" />
+          </div>
+        </div>
+        <div style="margin-top: 8px;">
+          <label for="replyToEmail">Reply-To Email (optional)</label>
+          <input id="replyToEmail" placeholder="support@yourdomain.com" />
+        </div>
+      </div>
+      <p class="hint" id="sendHint">Sends slices through your Vercel proxy and creates a draft campaign in Klaviyo.</p>
+      <div class="mini-actions" style="margin-top: 8px;">
+        <button id="sendToKlaviyo" class="secondary" disabled>Send To Klaviyo</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Status</h2>
+      <p class="status" id="statusText">Ready.</p>
+      <p class="hint" id="summaryText">No slices generated.</p>
+    </div>
+
+    <div class="panel">
+      <h2>Slice Preview</h2>
+      <div id="cuts" class="cuts"></div>
+    </div>
+
+    <script>
+      const DEFAULT_BUTTON_KEYWORDS = ["button", "btn", "cta"];
+
+      const state = {
+        nodes: [],
+        selectedNodeId: null,
+        audiences: [],
+        klaviyoAccounts: [],
+        detectedButtons: [],
+        exportPayload: null,
+        imageBytes: null,
+        imageBitmap: null,
+        slices: [],
+        cuts: [],
+        previewUrls: []
+      };
+
+      const els = {
+        nodeSelect: document.getElementById("nodeSelect"),
+        nodeMeta: document.getElementById("nodeMeta"),
+        detectButtons: document.getElementById("detectButtons"),
+        buttonKeywords: document.getElementById("buttonKeywords"),
+        bulkMarginTop: document.getElementById("bulkMarginTop"),
+        bulkMarginBottom: document.getElementById("bulkMarginBottom"),
+        applyMarginsAll: document.getElementById("applyMarginsAll"),
+        buttonsSummary: document.getElementById("buttonsSummary"),
+        buttonsList: document.getElementById("buttonsList"),
+        maxHeight: document.getElementById("maxHeight"),
+        exportScale: document.getElementById("exportScale"),
+        runExport: document.getElementById("runExport"),
+        refreshNodes: document.getElementById("refreshNodes"),
+        closePlugin: document.getElementById("closePlugin"),
+        downloadZip: document.getElementById("downloadZip"),
+        downloadManifest: document.getElementById("downloadManifest"),
+        proxyBaseUrl: document.getElementById("proxyBaseUrl"),
+        proxySecret: document.getElementById("proxySecret"),
+        klaviyoAccount: document.getElementById("klaviyoAccount"),
+        loadKlaviyoAccounts: document.getElementById("loadKlaviyoAccounts"),
+        emailWidth: document.getElementById("emailWidth"),
+        deliveryScale: document.getElementById("deliveryScale"),
+        outputFormat: document.getElementById("outputFormat"),
+        jpegQuality: document.getElementById("jpegQuality"),
+        templateName: document.getElementById("templateName"),
+        modeTemplateOnly: document.getElementById("modeTemplateOnly"),
+        modeTemplateCampaign: document.getElementById("modeTemplateCampaign"),
+        campaignFields: document.getElementById("campaignFields"),
+        campaignName: document.getElementById("campaignName"),
+        audienceIncluded: document.getElementById("audienceIncluded"),
+        audienceExcluded: document.getElementById("audienceExcluded"),
+        loadAudiences: document.getElementById("loadAudiences"),
+        audiencePicker: document.getElementById("audiencePicker"),
+        addAudienceIncluded: document.getElementById("addAudienceIncluded"),
+        addAudienceExcluded: document.getElementById("addAudienceExcluded"),
+        audiencesHint: document.getElementById("audiencesHint"),
+        campaignSubject: document.getElementById("campaignSubject"),
+        campaignPreviewText: document.getElementById("campaignPreviewText"),
+        fromEmail: document.getElementById("fromEmail"),
+        fromLabel: document.getElementById("fromLabel"),
+        replyToEmail: document.getElementById("replyToEmail"),
+        sendHint: document.getElementById("sendHint"),
+        sendToKlaviyo: document.getElementById("sendToKlaviyo"),
+        statusText: document.getElementById("statusText"),
+        summaryText: document.getElementById("summaryText"),
+        cuts: document.getElementById("cuts")
+      };
+
+      function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+      }
+
+      function readInt(input, fallback) {
+        const n = Number(input);
+        return Number.isFinite(n) ? Math.round(n) : fallback;
+      }
+
+      function readFloat(input, fallback) {
+        const n = Number(input);
+        return Number.isFinite(n) ? n : fallback;
+      }
+
+      function setStatus(message, kind) {
+        els.statusText.textContent = message;
+        els.statusText.classList.remove("error", "ok");
+        if (kind) {
+          els.statusText.classList.add(kind);
+        }
+      }
+
+      function postPluginMessage(type, payload) {
+        parent.postMessage({ pluginMessage: { type, payload } }, "*");
+      }
+
+      function toUint8Array(value) {
+        if (!value) {
+          return new Uint8Array();
+        }
+        if (value instanceof Uint8Array) {
+          return value;
+        }
+        if (Array.isArray(value)) {
+          return new Uint8Array(value);
+        }
+        if (value.type === "Buffer" && Array.isArray(value.data)) {
+          return new Uint8Array(value.data);
+        }
+        if (ArrayBuffer.isView(value)) {
+          return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+        }
+        if (value instanceof ArrayBuffer) {
+          return new Uint8Array(value);
+        }
+        return new Uint8Array();
+      }
+
+      function setExportButtonsEnabled(enabled) {
+        els.downloadZip.disabled = !enabled;
+        els.downloadManifest.disabled = !enabled;
+        els.sendToKlaviyo.disabled = !enabled;
+      }
+
+      function releasePreviewUrls() {
+        for (const url of state.previewUrls) {
+          URL.revokeObjectURL(url);
+        }
+        state.previewUrls = [];
+      }
+
+      function clearExportResult() {
+        releasePreviewUrls();
+        state.exportPayload = null;
+        state.imageBytes = null;
+        state.imageBitmap = null;
+        state.slices = [];
+        state.cuts = [];
+        els.cuts.innerHTML = "";
+        els.summaryText.textContent = "No slices generated.";
+        setExportButtonsEnabled(false);
+      }
+
+      function resetButtonsPanel() {
+        state.detectedButtons = [];
+        renderButtonsList();
+      }
+
+      function populateNodes(nodes) {
+        state.nodes = nodes || [];
+        els.nodeSelect.innerHTML = "";
+
+        if (!state.nodes.length) {
+          const option = document.createElement("option");
+          option.value = "";
+          option.textContent = "No top-level nodes";
+          els.nodeSelect.appendChild(option);
+          els.nodeMeta.textContent = "No level-1 nodes were found.";
+          setStatus("No nodes to process.", "error");
+          resetButtonsPanel();
+          clearExportResult();
+          return;
+        }
+
+        for (const node of state.nodes) {
+          const option = document.createElement("option");
+          option.value = node.id;
+          option.textContent = `${node.label} (${node.type}${node.width && node.height ? ` ${node.width}x${node.height}` : ""})`;
+          els.nodeSelect.appendChild(option);
+        }
+
+        if (!state.selectedNodeId || !state.nodes.some((n) => n.id === state.selectedNodeId)) {
+          state.selectedNodeId = state.nodes[0].id;
+        }
+
+        els.nodeSelect.value = state.selectedNodeId;
+        updateNodeMeta();
+      }
+
+      function updateNodeMeta() {
+        const previousNodeId = state.selectedNodeId;
+        const node = state.nodes.find((item) => item.id === els.nodeSelect.value);
+        state.selectedNodeId = node ? node.id : null;
+
+        if (!node) {
+          els.nodeMeta.textContent = "Select a node to continue.";
+          resetButtonsPanel();
+          clearExportResult();
+          return;
+        }
+
+        const size = node.width && node.height ? `${node.width}x${node.height}px` : "no dimensions";
+        els.nodeMeta.textContent = `Page: ${node.pageName} | Type: ${node.type} | Size: ${size}`;
+
+        if (previousNodeId && previousNodeId !== node.id) {
+          resetButtonsPanel();
+          clearExportResult();
+        }
+      }
+
+      function renderButtonsList() {
+        els.buttonsList.innerHTML = "";
+
+        if (!state.detectedButtons.length) {
+          els.buttonsSummary.textContent = "No buttons detected.";
+          els.applyMarginsAll.disabled = true;
+          return;
+        }
+
+        els.buttonsSummary.textContent = `${state.detectedButtons.length} buttons detected for this node.`;
+        els.applyMarginsAll.disabled = false;
+
+        for (let i = 0; i < state.detectedButtons.length; i += 1) {
+          const button = state.detectedButtons[i];
+
+          const row = document.createElement("div");
+          row.className = "button-row";
+
+          const head = document.createElement("div");
+          head.className = "button-row-head";
+
+          const name = document.createElement("div");
+          name.className = "button-name";
+          name.textContent = button.name || "(unnamed)";
+
+          const meta = document.createElement("div");
+          meta.className = "button-meta";
+          meta.textContent = `y=${Math.round(button.y)} h=${Math.round(button.height)}`;
+
+          head.appendChild(name);
+          head.appendChild(meta);
+
+          const margins = document.createElement("div");
+          margins.className = "button-margins";
+
+          const topWrap = document.createElement("div");
+          const topLabel = document.createElement("label");
+          topLabel.textContent = "Top Margin";
+          topLabel.setAttribute("for", `btn-top-${i}`);
+          const topInput = document.createElement("input");
+          topInput.id = `btn-top-${i}`;
+          topInput.type = "number";
+          topInput.min = "0";
+          topInput.value = String(button.marginTop);
+          topInput.addEventListener("input", () => {
+            state.detectedButtons[i].marginTop = clamp(readInt(topInput.value, state.detectedButtons[i].marginTop), 0, 10000);
+          });
+          topWrap.appendChild(topLabel);
+          topWrap.appendChild(topInput);
+
+          const bottomWrap = document.createElement("div");
+          const bottomLabel = document.createElement("label");
+          bottomLabel.textContent = "Bottom Margin";
+          bottomLabel.setAttribute("for", `btn-bottom-${i}`);
+          const bottomInput = document.createElement("input");
+          bottomInput.id = `btn-bottom-${i}`;
+          bottomInput.type = "number";
+          bottomInput.min = "0";
+          bottomInput.value = String(button.marginBottom);
+          bottomInput.addEventListener("input", () => {
+            state.detectedButtons[i].marginBottom = clamp(readInt(bottomInput.value, state.detectedButtons[i].marginBottom), 0, 10000);
+          });
+          bottomWrap.appendChild(bottomLabel);
+          bottomWrap.appendChild(bottomInput);
+
+          margins.appendChild(topWrap);
+          margins.appendChild(bottomWrap);
+
+          row.appendChild(head);
+          row.appendChild(margins);
+          els.buttonsList.appendChild(row);
+        }
+      }
+
+      function buildButtonMarginsMap() {
+        const map = {};
+        for (const button of state.detectedButtons) {
+          map[button.id] = {
+            marginTop: clamp(readInt(button.marginTop, 12), 0, 10000),
+            marginBottom: clamp(readInt(button.marginBottom, 12), 0, 10000)
+          };
+        }
+        return map;
+      }
+
+      function applyMarginsToAll() {
+        if (!state.detectedButtons.length) {
+          return;
+        }
+
+        const top = clamp(readInt(els.bulkMarginTop.value, 12), 0, 10000);
+        const bottom = clamp(readInt(els.bulkMarginBottom.value, 12), 0, 10000);
+
+        for (const button of state.detectedButtons) {
+          button.marginTop = top;
+          button.marginBottom = bottom;
+        }
+
+        renderButtonsList();
+        setStatus("Margins applied to all buttons.", "ok");
+      }
+
+      function parseIdList(value) {
+        return String(value || "")
+          .split(/[,\n;]/)
+          .map((item) => item.trim())
+          .filter(Boolean);
+      }
+
+      function getButtonKeywords() {
+        const source = String(els.buttonKeywords.value || "")
+          .split(/[,\n;]/)
+          .map((item) => item.trim().toLowerCase())
+          .filter(Boolean);
+
+        const unique = [];
+        const seen = new Set();
+        for (const keyword of source) {
+          if (!seen.has(keyword)) {
+            seen.add(keyword);
+            unique.push(keyword);
+          }
+        }
+
+        return unique.length ? unique : DEFAULT_BUTTON_KEYWORDS.slice();
+      }
+
+      function normalizeProxyBaseUrl(value) {
+        return String(value || "").trim().replace(/\/+$/, "");
+      }
+
+      function getProxyBaseUrl() {
+        return normalizeProxyBaseUrl(els.proxyBaseUrl.value);
+      }
+
+      function getProxySecret() {
+        return String(els.proxySecret.value || "").trim();
+      }
+
+      function getSelectedKlaviyoAccountId() {
+        return String(els.klaviyoAccount.value || "").trim();
+      }
+
+      function normalizeKlaviyoAccounts(accounts) {
+        const source = Array.isArray(accounts) ? accounts : [];
+        return source
+          .map((item) => ({
+            id: String(item && item.id ? item.id : "").trim(),
+            label: String(item && item.label ? item.label : "").trim(),
+            isDefault: Boolean(item && item.isDefault)
+          }))
+          .filter((item) => item.id);
+      }
+
+      function renderKlaviyoAccounts(accounts, preferredId) {
+        const previousId = typeof preferredId === "string" && preferredId.trim()
+          ? preferredId.trim()
+          : getSelectedKlaviyoAccountId();
+
+        state.klaviyoAccounts = normalizeKlaviyoAccounts(accounts);
+        els.klaviyoAccount.innerHTML = "";
+
+        if (!state.klaviyoAccounts.length) {
+          const option = document.createElement("option");
+          option.value = "";
+          option.textContent = "Default";
+          els.klaviyoAccount.appendChild(option);
+          return;
+        }
+
+        for (const account of state.klaviyoAccounts) {
+          const option = document.createElement("option");
+          option.value = account.id;
+          option.textContent = account.isDefault
+            ? `${account.label} (default)`
+            : account.label;
+          els.klaviyoAccount.appendChild(option);
+        }
+
+        const selected = state.klaviyoAccounts.find((item) => item.id === previousId)
+          || state.klaviyoAccounts.find((item) => item.isDefault)
+          || state.klaviyoAccounts[0];
+        els.klaviyoAccount.value = selected ? selected.id : "";
+      }
+
+      async function loadKlaviyoAccounts(options) {
+        const opts = options && typeof options === "object" ? options : {};
+        const silent = Boolean(opts.silent);
+
+        const baseUrl = getProxyBaseUrl();
+        if (!baseUrl) {
+          if (!silent) {
+            setStatus("Set Proxy Base URL first.", "error");
+          }
+          return false;
+        }
+        const proxySecret = getProxySecret();
+        if (!proxySecret) {
+          if (!silent) {
+            setStatus("Set Proxy Secret first.", "error");
+          }
+          return false;
+        }
+
+        const preferredId = getSelectedKlaviyoAccountId();
+        if (!silent) {
+          setStatus("Loading Klaviyo accounts...", null);
+        }
+        els.loadKlaviyoAccounts.disabled = true;
+
+        try {
+          const payload = await callProxy("/api/klaviyo/accounts", {
+            method: "GET"
+          });
+          const accounts = Array.isArray(payload.accounts) ? payload.accounts : [];
+          renderKlaviyoAccounts(accounts, preferredId);
+          if (!silent) {
+            setStatus(`${state.klaviyoAccounts.length} Klaviyo account(s) loaded.`, "ok");
+          }
+          return true;
+        } catch (error) {
+          if (!silent) {
+            setStatus(error.message || "Failed to load Klaviyo accounts.", "error");
+          }
+          return false;
+        } finally {
+          els.loadKlaviyoAccounts.disabled = false;
+        }
+      }
+
+      async function parseJsonResponse(response) {
+        const raw = await response.text();
+        if (!raw) {
+          return null;
+        }
+        try {
+          return JSON.parse(raw);
+        } catch (error) {
+          return raw;
+        }
+      }
+
+      async function callProxy(path, options) {
+        const baseUrl = getProxyBaseUrl();
+        if (!baseUrl) {
+          throw new Error("Set Proxy Base URL first.");
+        }
+        const proxySecret = getProxySecret();
+        if (!proxySecret) {
+          throw new Error("Set Proxy Secret first.");
+        }
+
+        const finalPath = String(path || "");
+        if (!finalPath.startsWith("/")) {
+          throw new Error("Proxy path must start with '/'.");
+        }
+
+        const request = options && typeof options === "object" ? options : {};
+        const headers = Object.assign(
+          { "Content-Type": "application/json" },
+          request.headers && typeof request.headers === "object" ? request.headers : {}
+        );
+        headers["x-proxy-secret"] = proxySecret;
+        const klaviyoAccountId = getSelectedKlaviyoAccountId();
+        if (klaviyoAccountId) {
+          headers["x-klaviyo-account"] = klaviyoAccountId;
+        }
+
+        const response = await fetch(`${baseUrl}${finalPath}`, {
+          method: request.method || "GET",
+          headers,
+          body: request.body
+        });
+
+        const parsed = await parseJsonResponse(response);
+        if (!response.ok) {
+          if (parsed && typeof parsed === "object") {
+            const parts = [];
+            if (parsed.error) {
+              parts.push(String(parsed.error));
+            }
+            if (parsed.details) {
+              parts.push(
+                typeof parsed.details === "string"
+                  ? parsed.details
+                  : JSON.stringify(parsed.details)
+              );
+            }
+            const joined = parts.join(" | ");
+            throw new Error(joined || `Proxy request failed (${response.status}).`);
+          }
+
+          throw new Error(String(parsed || `Proxy request failed (${response.status}).`));
+        }
+
+        return parsed && typeof parsed === "object" ? parsed : {};
+      }
+
+      function getAudienceOptionKey(audience) {
+        return `${audience.type}:${audience.id}`;
+      }
+
+      function renderAudiencePicker() {
+        els.audiencePicker.innerHTML = "";
+
+        if (!state.audiences.length) {
+          const option = document.createElement("option");
+          option.value = "";
+          option.textContent = "No audiences loaded";
+          els.audiencePicker.appendChild(option);
+          els.addAudienceIncluded.disabled = true;
+          els.addAudienceExcluded.disabled = true;
+          return;
+        }
+
+        for (const audience of state.audiences) {
+          const option = document.createElement("option");
+          option.value = getAudienceOptionKey(audience);
+          option.textContent = `${audience.type.toUpperCase()} | ${audience.name} (${audience.id})`;
+          els.audiencePicker.appendChild(option);
+        }
+
+        els.addAudienceIncluded.disabled = false;
+        els.addAudienceExcluded.disabled = false;
+      }
+
+      function getSelectedAudience() {
+        const selectedKey = String(els.audiencePicker.value || "").trim();
+        if (!selectedKey) {
+          return null;
+        }
+        return state.audiences.find((audience) => getAudienceOptionKey(audience) === selectedKey) || null;
+      }
+
+      function appendAudienceId(inputEl, audienceId) {
+        if (!audienceId) {
+          return false;
+        }
+
+        const ids = parseIdList(inputEl.value);
+        if (ids.includes(audienceId)) {
+          return false;
+        }
+
+        ids.push(audienceId);
+        inputEl.value = ids.join(", ");
+        return true;
+      }
+
+      async function loadAudiencesFromKlaviyo() {
+        const baseUrl = getProxyBaseUrl();
+        if (!baseUrl) {
+          setStatus("Set Proxy Base URL first.", "error");
+          return;
+        }
+
+        if (!state.klaviyoAccounts.length) {
+          await loadKlaviyoAccounts({ silent: true });
+        }
+
+        setStatus("Loading audiences from Klaviyo through proxy...", null);
+        els.loadAudiences.disabled = true;
+
+        try {
+          const payload = await callProxy("/api/klaviyo/audiences", {
+            method: "GET"
+          });
+          const audiences = Array.isArray(payload.audiences) ? payload.audiences : [];
+
+          state.audiences = audiences.map((item) => ({
+            id: String(item && item.id ? item.id : ""),
+            type: String(item && item.type ? item.type : ""),
+            name: String(item && item.name ? item.name : "")
+          })).filter((item) => item.id && item.type);
+
+          renderAudiencePicker();
+
+          const warnings = Array.isArray(payload.warnings) ? payload.warnings.filter(Boolean) : [];
+          els.audiencesHint.textContent = warnings.length
+            ? warnings.join(" ")
+            : `${state.audiences.length} audiences loaded.`;
+          setStatus(`${state.audiences.length} audiences loaded.`, "ok");
+        } catch (error) {
+          setStatus(error.message || "Failed to load audiences.", "error");
+        } finally {
+          els.loadAudiences.disabled = false;
+        }
+      }
+
+      function getOutputSettings() {
+        const format = String(els.outputFormat.value || "png").toLowerCase() === "jpeg" ? "jpeg" : "png";
+        const maxWidth = clamp(readInt(els.emailWidth.value, 600), 320, 3000);
+        const deliveryScale = clamp(readFloat(els.deliveryScale.value, 2), 1, 4);
+        const jpegQuality = clamp(readInt(els.jpegQuality.value, 80), 30, 100);
+        const contentType = format === "jpeg" ? "image/jpeg" : "image/png";
+        const extension = format === "jpeg" ? "jpg" : "png";
+        return {
+          format,
+          maxWidth,
+          deliveryScale,
+          jpegQuality,
+          contentType,
+          extension
+        };
+      }
+
+      function getCampaignSettings(defaultName) {
+        const campaignName = String(els.campaignName.value || "").trim() || `${defaultName} Campaign`;
+        const includedAudienceIds = parseIdList(els.audienceIncluded.value);
+        const excludedAudienceIds = parseIdList(els.audienceExcluded.value);
+        const subject = String(els.campaignSubject.value || "").trim();
+        const previewText = String(els.campaignPreviewText.value || "").trim();
+        const fromEmail = String(els.fromEmail.value || "").trim();
+        const fromLabel = String(els.fromLabel.value || "").trim();
+        const replyToEmail = String(els.replyToEmail.value || "").trim();
+
+        return {
+          name: campaignName,
+          includedAudienceIds,
+          excludedAudienceIds,
+          subject,
+          previewText,
+          fromEmail,
+          fromLabel,
+          replyToEmail
+        };
+      }
+
+      function getKlaviyoMode() {
+        return els.modeTemplateCampaign.checked ? "campaign" : "template";
+      }
+
+      function syncKlaviyoMode() {
+        const mode = getKlaviyoMode();
+        const isCampaign = mode === "campaign";
+        els.campaignFields.style.display = isCampaign ? "" : "none";
+        els.sendHint.textContent = isCampaign
+          ? "Sends slices through your Vercel proxy and creates a draft campaign in Klaviyo."
+          : "Sends slices through your Vercel proxy and creates a template in Klaviyo.";
+        els.sendToKlaviyo.textContent = isCampaign ? "Send To Klaviyo" : "Create Template In Klaviyo";
+      }
+
+      function syncOutputControls() {
+        const format = String(els.outputFormat.value || "png").toLowerCase();
+        els.jpegQuality.disabled = format !== "jpeg";
+      }
+
+      function splitRange(top, bottom, maxHeight) {
+        const slices = [];
+        if (bottom <= top) {
+          return slices;
+        }
+
+        const safeMax = maxHeight > 0 ? maxHeight : bottom - top;
+        let cursor = top;
+        while (cursor < bottom) {
+          const next = Math.min(bottom, cursor + safeMax);
+          slices.push({ top: cursor, bottom: next });
+          cursor = next;
+        }
+        return slices;
+      }
+
+      function normalizeSlices(slices, imageHeight, maxHeight) {
+        const normalized = [];
+        for (const slice of slices || []) {
+          const top = clamp(Math.floor(slice.top), 0, imageHeight);
+          const bottom = clamp(Math.ceil(slice.bottom), 0, imageHeight);
+          if (bottom <= top) {
+            continue;
+          }
+          const parts = splitRange(top, bottom, maxHeight);
+          for (const part of parts) {
+            normalized.push(part);
+          }
+        }
+
+        normalized.sort((a, b) => a.top - b.top);
+        return normalized;
+      }
+
+      async function canvasToBlob(canvas) {
+        return new Promise((resolve, reject) => {
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              reject(new Error("Failed to convert canvas to PNG."));
+              return;
+            }
+            resolve(blob);
+          }, "image/png");
+        });
+      }
+
+      async function rebuildCuts() {
+        if (!state.imageBitmap || !state.exportPayload) {
+          return;
+        }
+
+        const previousMeta = new Map();
+        for (const cut of state.cuts) {
+          previousMeta.set(`${cut.top}:${cut.bottom}`, {
+            link: String(cut.link || ""),
+            alt: String(cut.alt || "")
+          });
+        }
+
+        releasePreviewUrls();
+        state.cuts = [];
+
+        const rootSlug = (state.exportPayload.root && state.exportPayload.root.slug) || "design";
+        const width = state.imageBitmap.width;
+
+        for (let i = 0; i < state.slices.length; i += 1) {
+          const slice = state.slices[i];
+          const height = slice.bottom - slice.top;
+          if (height <= 0) {
+            continue;
+          }
+
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(state.imageBitmap, 0, -slice.top);
+
+          const blob = await canvasToBlob(canvas);
+          const bytes = new Uint8Array(await blob.arrayBuffer());
+          const url = URL.createObjectURL(blob);
+          state.previewUrls.push(url);
+          const key = `${slice.top}:${slice.bottom}`;
+          const meta = previousMeta.get(key) || { link: "", alt: "" };
+
+          state.cuts.push({
+            index: i + 1,
+            filename: `${rootSlug}-cut-${String(i + 1).padStart(2, "0")}.png`,
+            top: slice.top,
+            bottom: slice.bottom,
+            height,
+            bytes,
+            previewUrl: url,
+            link: meta.link,
+            alt: meta.alt
+          });
+        }
+
+        renderCuts();
+      }
+
+      function renderCuts() {
+        els.cuts.innerHTML = "";
+
+        if (!state.cuts.length) {
+          els.summaryText.textContent = "No slices generated.";
+          return;
+        }
+
+        const buttonCount = state.exportPayload && Array.isArray(state.exportPayload.buttons)
+          ? state.exportPayload.buttons.length
+          : 0;
+        const output = getOutputSettings();
+        const rootSlug = state.exportPayload && state.exportPayload.root && state.exportPayload.root.slug
+          ? state.exportPayload.root.slug
+          : "design";
+
+        els.summaryText.textContent = `${state.cuts.length} slices | ${buttonCount} buttons used`;
+
+        for (let i = 0; i < state.cuts.length; i += 1) {
+          const cut = state.cuts[i];
+          const outputFilename = `${rootSlug}-cut-${String(i + 1).padStart(2, "0")}.${output.extension}`;
+          const row = document.createElement("div");
+          row.className = "cut";
+
+          const image = document.createElement("img");
+          image.src = cut.previewUrl;
+          image.alt = cut.filename;
+
+          const meta = document.createElement("div");
+          meta.innerHTML = `
+            <strong>${outputFilename}</strong>
+            <small>top=${cut.top}px</small>
+            <small>bottom=${cut.bottom}px</small>
+            <small>height=${cut.height}px</small>
+          `;
+
+          const fields = document.createElement("div");
+          fields.className = "cut-fields";
+
+          const linkWrap = document.createElement("div");
+          const linkLabel = document.createElement("label");
+          linkLabel.textContent = "Link URL (optional)";
+          linkLabel.setAttribute("for", `cut-link-${cut.index}`);
+          const linkInput = document.createElement("input");
+          linkInput.id = `cut-link-${cut.index}`;
+          linkInput.type = "text";
+          linkInput.placeholder = "https://...";
+          linkInput.value = String(cut.link || "");
+          linkInput.addEventListener("input", () => {
+            cut.link = String(linkInput.value || "").trim();
+          });
+          linkWrap.appendChild(linkLabel);
+          linkWrap.appendChild(linkInput);
+
+          const altWrap = document.createElement("div");
+          const altLabel = document.createElement("label");
+          altLabel.textContent = "Alt Text (optional)";
+          altLabel.setAttribute("for", `cut-alt-${cut.index}`);
+          const altInput = document.createElement("input");
+          altInput.id = `cut-alt-${cut.index}`;
+          altInput.type = "text";
+          altInput.placeholder = "Image description";
+          altInput.value = String(cut.alt || "");
+          altInput.addEventListener("input", () => {
+            cut.alt = String(altInput.value || "").trim();
+          });
+          altWrap.appendChild(altLabel);
+          altWrap.appendChild(altInput);
+
+          fields.appendChild(linkWrap);
+          fields.appendChild(altWrap);
+          meta.appendChild(fields);
+
+          row.appendChild(image);
+          row.appendChild(meta);
+          els.cuts.appendChild(row);
+        }
+      }
+
+      async function encodeCutForOutput(cut, settings) {
+        if (!state.imageBitmap) {
+          throw new Error("No exported image loaded.");
+        }
+
+        const sourceWidth = state.imageBitmap.width;
+        const sourceHeight = cut.height;
+        const outputWidth = Math.max(1, Math.round(settings.maxWidth * settings.deliveryScale));
+        const outputHeight = Math.max(1, Math.round(sourceHeight * (outputWidth / sourceWidth)));
+
+        const canvas = document.createElement("canvas");
+        canvas.width = outputWidth;
+        canvas.height = outputHeight;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(
+          state.imageBitmap,
+          0,
+          cut.top,
+          sourceWidth,
+          sourceHeight,
+          0,
+          0,
+          outputWidth,
+          outputHeight
+        );
+
+        const quality = settings.format === "jpeg" ? settings.jpegQuality / 100 : undefined;
+        const blob = await new Promise((resolve, reject) => {
+          canvas.toBlob((value) => {
+            if (!value) {
+              reject(new Error(`Failed to encode ${cut.filename}`));
+              return;
+            }
+            resolve(value);
+          }, settings.contentType, quality);
+        });
+
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        return {
+          source: cut,
+          bytes,
+          outputWidth,
+          outputHeight
+        };
+      }
+
+      async function buildOutputCuts() {
+        if (!state.cuts.length || !state.exportPayload) {
+          return {
+            settings: getOutputSettings(),
+            files: []
+          };
+        }
+
+        const settings = getOutputSettings();
+        const rootSlug = state.exportPayload.root && state.exportPayload.root.slug
+          ? state.exportPayload.root.slug
+          : "design";
+
+        const files = [];
+        for (let i = 0; i < state.cuts.length; i += 1) {
+          const cut = state.cuts[i];
+          const encoded = await encodeCutForOutput(cut, settings);
+          files.push({
+            index: i + 1,
+            filename: `${rootSlug}-cut-${String(i + 1).padStart(2, "0")}.${settings.extension}`,
+            bytes: encoded.bytes,
+            contentType: settings.contentType,
+            link: String(cut.link || "").trim(),
+            alt: String(cut.alt || "").trim(),
+            top: cut.top,
+            bottom: cut.bottom,
+            height: cut.height,
+            outputWidth: encoded.outputWidth,
+            outputHeight: encoded.outputHeight
+          });
+        }
+
+        return {
+          settings,
+          files
+        };
+      }
+
+      function uint8ToBase64(bytes) {
+        const chunkSize = 0x8000;
+        let binary = "";
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          const chunk = bytes.subarray(i, i + chunkSize);
+          binary += String.fromCharCode.apply(null, chunk);
+        }
+        return btoa(binary);
+      }
+
+      function concatUint8Arrays(chunks) {
+        const total = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+        const out = new Uint8Array(total);
+        let offset = 0;
+        for (const chunk of chunks) {
+          out.set(chunk, offset);
+          offset += chunk.length;
+        }
+        return out;
+      }
+
+      const CRC_TABLE = (() => {
+        const table = new Uint32Array(256);
+        for (let i = 0; i < 256; i += 1) {
+          let c = i;
+          for (let k = 0; k < 8; k += 1) {
+            c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+          }
+          table[i] = c >>> 0;
+        }
+        return table;
+      })();
+
+      function crc32(bytes) {
+        let crc = 0xffffffff;
+        for (let i = 0; i < bytes.length; i += 1) {
+          crc = CRC_TABLE[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8);
+        }
+        return (crc ^ 0xffffffff) >>> 0;
+      }
+
+      function buildZip(entries) {
+        const encoder = new TextEncoder();
+        const localParts = [];
+        const centralParts = [];
+        let offset = 0;
+
+        for (const entry of entries) {
+          const nameBytes = encoder.encode(entry.name);
+          const data = entry.data;
+          const crc = crc32(data);
+
+          const local = new Uint8Array(30 + nameBytes.length + data.length);
+          const localView = new DataView(local.buffer);
+          localView.setUint32(0, 0x04034b50, true);
+          localView.setUint16(4, 20, true);
+          localView.setUint16(6, 0, true);
+          localView.setUint16(8, 0, true);
+          localView.setUint16(10, 0, true);
+          localView.setUint16(12, 0, true);
+          localView.setUint32(14, crc, true);
+          localView.setUint32(18, data.length, true);
+          localView.setUint32(22, data.length, true);
+          localView.setUint16(26, nameBytes.length, true);
+          localView.setUint16(28, 0, true);
+          local.set(nameBytes, 30);
+          local.set(data, 30 + nameBytes.length);
+
+          const central = new Uint8Array(46 + nameBytes.length);
+          const centralView = new DataView(central.buffer);
+          centralView.setUint32(0, 0x02014b50, true);
+          centralView.setUint16(4, 20, true);
+          centralView.setUint16(6, 20, true);
+          centralView.setUint16(8, 0, true);
+          centralView.setUint16(10, 0, true);
+          centralView.setUint16(12, 0, true);
+          centralView.setUint16(14, 0, true);
+          centralView.setUint32(16, crc, true);
+          centralView.setUint32(20, data.length, true);
+          centralView.setUint32(24, data.length, true);
+          centralView.setUint16(28, nameBytes.length, true);
+          centralView.setUint16(30, 0, true);
+          centralView.setUint16(32, 0, true);
+          centralView.setUint16(34, 0, true);
+          centralView.setUint16(36, 0, true);
+          centralView.setUint32(38, 0, true);
+          centralView.setUint32(42, offset, true);
+          central.set(nameBytes, 46);
+
+          localParts.push(local);
+          centralParts.push(central);
+          offset += local.length;
+        }
+
+        const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0);
+        const end = new Uint8Array(22);
+        const endView = new DataView(end.buffer);
+        endView.setUint32(0, 0x06054b50, true);
+        endView.setUint16(4, 0, true);
+        endView.setUint16(6, 0, true);
+        endView.setUint16(8, entries.length, true);
+        endView.setUint16(10, entries.length, true);
+        endView.setUint32(12, centralSize, true);
+        endView.setUint32(16, offset, true);
+        endView.setUint16(20, 0, true);
+
+        return concatUint8Arrays(localParts.concat(centralParts, [end]));
+      }
+
+      function downloadBlob(name, blob) {
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = name;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+
+      function buildManifestJson() {
+        if (!state.exportPayload) {
+          return null;
+        }
+
+        const output = getOutputSettings();
+        const rootSlug = state.exportPayload.root && state.exportPayload.root.slug
+          ? state.exportPayload.root.slug
+          : "design";
+
+        return {
+          generatedAt: new Date().toISOString(),
+          root: state.exportPayload.root,
+          defaultButtonMargin: state.exportPayload.defaultButtonMargin,
+          buttonKeywords: Array.isArray(state.exportPayload.buttonKeywords) ? state.exportPayload.buttonKeywords : getButtonKeywords(),
+          exportScale: state.exportPayload.exportScale,
+          maxHeight: readInt(els.maxHeight.value, state.exportPayload.maxHeight || 1400),
+          output,
+          buttons: state.exportPayload.buttons,
+          slices: state.slices,
+          files: state.cuts.map((cut, index) => ({
+            filename: `${rootSlug}-cut-${String(index + 1).padStart(2, "0")}.${output.extension}`,
+            top: cut.top,
+            bottom: cut.bottom,
+            height: cut.height,
+            link: String(cut.link || ""),
+            alt: String(cut.alt || "")
+          }))
+        };
+      }
+
+      async function handleExportResult(payload) {
+        state.exportPayload = payload;
+        state.imageBytes = toUint8Array(payload.imageBytes);
+
+        if (Array.isArray(payload.buttonKeywords) && payload.buttonKeywords.length) {
+          els.buttonKeywords.value = payload.buttonKeywords.join(", ");
+        }
+
+        if (!state.imageBytes.length) {
+          throw new Error("Exported image is empty.");
+        }
+
+        const blob = new Blob([state.imageBytes], { type: "image/png" });
+        if (typeof createImageBitmap === "function") {
+          state.imageBitmap = await createImageBitmap(blob);
+        } else {
+          const image = document.createElement("img");
+          const objectUrl = URL.createObjectURL(blob);
+          image.src = objectUrl;
+          await new Promise((resolve, reject) => {
+            image.onload = resolve;
+            image.onerror = () => reject(new Error("Unable to open the PNG."));
+          });
+          URL.revokeObjectURL(objectUrl);
+          state.imageBitmap = image;
+        }
+
+        const imageHeight = payload.root.imageHeight;
+        const maxHeight = clamp(readInt(els.maxHeight.value, payload.maxHeight || 1400), 1, 100000);
+        state.slices = normalizeSlices(payload.slices, imageHeight, maxHeight);
+
+        await rebuildCuts();
+        setExportButtonsEnabled(true);
+
+        setStatus(
+          `Export completed (${payload.exportScale}x): ${payload.root.imageWidth}x${payload.root.imageHeight}px, ${payload.buttons.length} buttons, ${state.cuts.length} slices.`,
+          "ok"
+        );
+      }
+
+      async function sendToKlaviyo() {
+        if (!state.cuts.length || !state.exportPayload) {
+          setStatus("Generate slices before sending to Klaviyo.", "error");
+          return;
+        }
+
+        const proxyBaseUrl = getProxyBaseUrl();
+        if (!proxyBaseUrl) {
+          setStatus("Set Proxy Base URL first.", "error");
+          return;
+        }
+
+        if (!state.klaviyoAccounts.length) {
+          await loadKlaviyoAccounts({ silent: true });
+        }
+
+        const mode = getKlaviyoMode();
+        const shouldCreateDraftCampaign = mode === "campaign";
+        const templateName = String(els.templateName.value || "").trim() || `${state.exportPayload.root.name} Import`;
+        const campaign = shouldCreateDraftCampaign ? getCampaignSettings(templateName) : null;
+
+        if (shouldCreateDraftCampaign) {
+          if (!campaign.includedAudienceIds.length) {
+            setStatus("Add at least one Included Audience ID to create the draft campaign.", "error");
+            return;
+          }
+          if (!campaign.subject) {
+            setStatus("Email Subject is required.", "error");
+            return;
+          }
+          if (!campaign.fromEmail) {
+            setStatus("From Email is required.", "error");
+            return;
+          }
+          if (!campaign.fromLabel) {
+            setStatus("From Name is required.", "error");
+            return;
+          }
+        }
+
+        setStatus("Preparing optimized slices...", null);
+
+        try {
+          const output = await buildOutputCuts();
+          if (!output.files.length) {
+            throw new Error("No slices available.");
+          }
+
+          setStatus("Sending slices through proxy to Klaviyo...", null);
+          els.sendToKlaviyo.disabled = true;
+
+          const payload = {
+            templateName,
+            nodeName: state.exportPayload.root.name,
+            campaign,
+            maxWidth: output.settings.maxWidth,
+            images: output.files.map((file) => ({
+              filename: file.filename,
+              contentType: file.contentType,
+              base64: uint8ToBase64(file.bytes),
+              top: file.top,
+              bottom: file.bottom,
+              height: file.height,
+              outputWidth: file.outputWidth,
+              outputHeight: file.outputHeight,
+              link: file.link,
+              alt: file.alt
+            })),
+            optimization: {
+              format: output.settings.format,
+              jpegQuality: output.settings.jpegQuality,
+              maxWidth: output.settings.maxWidth,
+              deliveryScale: output.settings.deliveryScale
+            },
+            createDraftCampaign: shouldCreateDraftCampaign
+          };
+
+          const response = await callProxy("/api/klaviyo/from-cuts", {
+            method: "POST",
+            body: JSON.stringify(payload)
+          });
+
+          const templateId = response && response.template && response.template.id ? response.template.id : "(no id)";
+          if (shouldCreateDraftCampaign) {
+            const campaignId = response && response.campaign && response.campaign.id ? response.campaign.id : "(no id)";
+            setStatus(`Template ${templateId} and draft campaign ${campaignId} created in Klaviyo.`, "ok");
+          } else {
+            setStatus(`Template ${templateId} created in Klaviyo.`, "ok");
+          }
+          els.sendToKlaviyo.disabled = false;
+        } catch (error) {
+          els.sendToKlaviyo.disabled = false;
+          setStatus(error.message || "Failed to send to Klaviyo.", "error");
+        }
+      }
+
+      function bindEvents() {
+        els.refreshNodes.addEventListener("click", () => {
+          setStatus("Loading top-level nodes...", null);
+          postPluginMessage("nodes:request");
+        });
+
+        els.nodeSelect.addEventListener("change", () => {
+          updateNodeMeta();
+        });
+
+        els.outputFormat.addEventListener("change", () => {
+          syncOutputControls();
+          if (state.cuts.length) {
+            renderCuts();
+          }
+        });
+
+        els.loadKlaviyoAccounts.addEventListener("click", () => {
+          loadKlaviyoAccounts();
+        });
+
+        els.proxyBaseUrl.addEventListener("change", () => {
+          renderKlaviyoAccounts([]);
+        });
+        els.proxySecret.addEventListener("change", () => {
+          renderKlaviyoAccounts([]);
+        });
+
+        els.modeTemplateOnly.addEventListener("change", () => {
+          syncKlaviyoMode();
+        });
+        els.modeTemplateCampaign.addEventListener("change", () => {
+          syncKlaviyoMode();
+        });
+
+        els.loadAudiences.addEventListener("click", () => {
+          loadAudiencesFromKlaviyo();
+        });
+
+        els.addAudienceIncluded.addEventListener("click", () => {
+          const selected = getSelectedAudience();
+          if (!selected) {
+            setStatus("Select an audience first.", "error");
+            return;
+          }
+
+          const added = appendAudienceId(els.audienceIncluded, selected.id);
+          setStatus(
+            added
+              ? `Added ${selected.type} '${selected.name}' to included audiences.`
+              : `Audience '${selected.name}' is already included.`,
+            "ok"
+          );
+        });
+
+        els.addAudienceExcluded.addEventListener("click", () => {
+          const selected = getSelectedAudience();
+          if (!selected) {
+            setStatus("Select an audience first.", "error");
+            return;
+          }
+
+          const added = appendAudienceId(els.audienceExcluded, selected.id);
+          setStatus(
+            added
+              ? `Added ${selected.type} '${selected.name}' to excluded audiences.`
+              : `Audience '${selected.name}' is already excluded.`,
+            "ok"
+          );
+        });
+
+        els.closePlugin.addEventListener("click", () => {
+          postPluginMessage("plugin:close");
+        });
+
+        els.detectButtons.addEventListener("click", () => {
+          if (!els.nodeSelect.value) {
+            setStatus("Select a node before detecting buttons.", "error");
+            return;
+          }
+
+          setStatus("Detecting buttons in selected node...", null);
+          postPluginMessage("buttons:detect", {
+            nodeId: els.nodeSelect.value,
+            buttonKeywords: getButtonKeywords()
+          });
+        });
+
+        els.applyMarginsAll.addEventListener("click", () => {
+          applyMarginsToAll();
+        });
+
+        els.runExport.addEventListener("click", () => {
+          if (!els.nodeSelect.value) {
+            setStatus("Select a node before exporting.", "error");
+            return;
+          }
+
+          setStatus("Processing selected design...", null);
+          setExportButtonsEnabled(false);
+          postPluginMessage("export:run", {
+            nodeId: els.nodeSelect.value,
+            maxHeight: readInt(els.maxHeight.value, 1400),
+            exportScale: Number(els.exportScale.value || "2"),
+            buttonMargins: buildButtonMarginsMap(),
+            buttonKeywords: getButtonKeywords()
+          });
+        });
+
+        els.downloadZip.addEventListener("click", async () => {
+          if (!state.cuts.length || !state.exportPayload) {
+            setStatus("Nothing to export as ZIP.", "error");
+            return;
+          }
+
+          try {
+            setStatus("Building optimized ZIP...", null);
+            const output = await buildOutputCuts();
+            const entries = output.files.map((file) => ({ name: file.filename, data: file.bytes }));
+
+            const zipBytes = buildZip(entries);
+            const rootSlug = state.exportPayload.root.slug || "design";
+            downloadBlob(`${rootSlug}-cuts.zip`, new Blob([zipBytes], { type: "application/zip" }));
+            setStatus(`ZIP downloaded (${output.settings.format.toUpperCase()}, ${output.settings.maxWidth}px at ${output.settings.deliveryScale}x).`, "ok");
+          } catch (error) {
+            setStatus(error.message || "Failed to build ZIP.", "error");
+          }
+        });
+
+        els.downloadManifest.addEventListener("click", () => {
+          const manifest = buildManifestJson();
+          if (!manifest || !state.exportPayload) {
+            setStatus("No manifest available to download.", "error");
+            return;
+          }
+
+          const rootSlug = state.exportPayload.root.slug || "design";
+          const blob = new Blob([JSON.stringify(manifest, null, 2)], {
+            type: "application/json"
+          });
+          downloadBlob(`${rootSlug}-manifest.json`, blob);
+          setStatus("Manifest downloaded.", "ok");
+        });
+
+        els.sendToKlaviyo.addEventListener("click", () => {
+          sendToKlaviyo();
+        });
+
+        window.onmessage = async (event) => {
+          const message = event.data && event.data.pluginMessage;
+          if (!message || !message.type) {
+            return;
+          }
+
+          try {
+            if (message.type === "nodes:list") {
+              populateNodes(message.payload.nodes || []);
+              setStatus("Nodes loaded.", "ok");
+              return;
+            }
+
+            if (message.type === "buttons:result") {
+              const payload = message.payload || {};
+              const buttons = Array.isArray(payload.buttons) ? payload.buttons : [];
+              const buttonKeywords = Array.isArray(payload.buttonKeywords) ? payload.buttonKeywords : [];
+
+              if (buttonKeywords.length) {
+                els.buttonKeywords.value = buttonKeywords.join(", ");
+              }
+
+              state.detectedButtons = buttons.map((button) => ({
+                id: button.id,
+                name: button.name,
+                y: button.y,
+                height: button.height,
+                marginTop: button.marginTop,
+                marginBottom: button.marginBottom
+              }));
+              renderButtonsList();
+              setStatus(`${state.detectedButtons.length} buttons detected.`, "ok");
+              return;
+            }
+
+            if (message.type === "export:progress") {
+              setStatus(message.payload.message || "Processing...", null);
+              return;
+            }
+
+            if (message.type === "export:result") {
+              await handleExportResult(message.payload);
+              return;
+            }
+
+            if (message.type === "plugin:error" || message.type === "export:error") {
+              throw new Error(message.payload.message || "Processing error.");
+            }
+          } catch (error) {
+            els.sendToKlaviyo.disabled = false;
+            els.loadAudiences.disabled = false;
+            setStatus(error.message || "Unexpected error.", "error");
+          }
+        };
+      }
+
+      bindEvents();
+      renderButtonsList();
+      renderAudiencePicker();
+      renderKlaviyoAccounts([]);
+      syncOutputControls();
+      syncKlaviyoMode();
+      setExportButtonsEnabled(false);
+      if (getProxyBaseUrl() && getProxySecret()) {
+        loadKlaviyoAccounts({ silent: true });
+      }
+      postPluginMessage("nodes:request");
+    </script>
+  </body>
+</html>
