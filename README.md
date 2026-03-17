@@ -2,15 +2,18 @@
 
 Figma plugin + Vercel proxy workflow.
 
-Last updated: 2026-03-12.
+Last updated: 2026-03-16.
 
 The plugin:
 - lists top-level nodes (level 1)
 - detects buttons by configurable tokens (contains match)
 - exports the selected design and creates automatic slices
 - protects button zones with per-button margins
+- can ignore named sections from slices using token matching (for example: `footer`)
 - supports per-slice link URL and alt text
 - lets you optimize delivery output (`PNG/JPEG`, quality, width, `1x/2x`)
+- lets you choose an optional footer from Klaviyo Universal Content
+- lets you append an optional custom HTML footer
 - sends slices to a Vercel API proxy
 - supports `Template only` or `Template + Draft Campaign` mode in the plugin
 - creates Klaviyo assets through that proxy
@@ -47,7 +50,12 @@ Audience debug URL (optional):
 - `https://your-project.vercel.app/api/klaviyo/audiences?proxy_secret=YOUR_PROXY_SHARED_SECRET`
 - With explicit account selection:
 - `https://your-project.vercel.app/api/klaviyo/audiences?proxy_secret=YOUR_PROXY_SHARED_SECRET&klaviyo_account=KLAVIYO_PRIVATE_API_KEY_SITE1`
-- This query fallback is enabled only for the audiences endpoint.
+- This query fallback is enabled for the audiences and universal-content endpoints.
+
+Universal content debug URL (optional):
+- `https://your-project.vercel.app/api/klaviyo/universal-content?proxy_secret=YOUR_PROXY_SHARED_SECRET`
+- With explicit account selection:
+- `https://your-project.vercel.app/api/klaviyo/universal-content?proxy_secret=YOUR_PROXY_SHARED_SECRET&klaviyo_account=KLAVIYO_PRIVATE_API_KEY_SITE1`
 
 CLI equivalent:
 1. `npm i -g vercel` (if needed)
@@ -61,6 +69,7 @@ CLI equivalent:
 
 Required Klaviyo key scopes:
 - `templates:write`
+- `templates:read` (required to load Universal Content footer options)
 - `images:write`
 - `campaigns:write`
 - `lists:read`
@@ -90,15 +99,18 @@ For local testing instead of a deployed URL:
 2. Click `Detect Buttons`
 3. Adjust per-button margins
 4. Set `Max Height` and export scale
-5. Click `Export + Generate Slices`
-6. (Optional) Set link + alt text per slice
-7. Choose mode:
+5. (Optional) enable `Ignore Named Sections` and set tokens (for example: `footer`)
+6. Click `Export + Generate Slices`
+7. (Optional) Set link + alt text per slice
+8. Choose mode:
 - `Template only` to create only the template
 - `Template + Draft Campaign` to also create the campaign draft
-8. If campaign mode: (optional) click `Load Audiences` and add IDs to included/excluded
-9. If campaign mode: fill campaign fields (`subject`, `from email`, `from name`, etc.)
-10. (Optional) choose `Klaviyo Account` from the dropdown (multi-account setup)
-11. Click `Send To Klaviyo` (or `Create Template In Klaviyo` in template-only mode)
+9. If campaign mode: (optional) click `Load Audiences` and add IDs to included/excluded
+10. If campaign mode: fill campaign fields (`subject`, `from email`, `from name`, etc.)
+11. (Optional) choose `Klaviyo Account` from the dropdown (multi-account setup)
+12. (Optional) click `Load` in `Footer (Universal Content)` and select the footer block you want appended
+13. (Optional) add `Custom Footer HTML`
+14. Click `Send To Klaviyo` (or `Create Template In Klaviyo` in template-only mode)
 
 ## 6) Project Structure
 

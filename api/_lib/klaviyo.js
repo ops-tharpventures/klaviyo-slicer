@@ -388,6 +388,17 @@ function buildEmailHtmlFromImageUrls(entries, options = {}) {
   const background = options.backgroundColor || "#ffffff";
   const spacing = Number.isFinite(options.spacing) ? Math.max(0, options.spacing) : 0;
   const maxWidth = Number.isFinite(options.maxWidth) ? Math.max(320, options.maxWidth) : 600;
+  const footerHtmlItems = [];
+  const sourceFooterItems = Array.isArray(options.footerHtmlItems) ? options.footerHtmlItems : [];
+  for (const item of sourceFooterItems) {
+    const html = typeof item === "string" ? item.trim() : "";
+    if (html) {
+      footerHtmlItems.push(html);
+    }
+  }
+  if (typeof options.footerHtml === "string" && options.footerHtml.trim()) {
+    footerHtmlItems.push(options.footerHtml.trim());
+  }
   const images = normalizeImageEntries(entries);
 
   const rows = images
@@ -409,6 +420,16 @@ function buildEmailHtmlFromImageUrls(entries, options = {}) {
     })
     .join("\n");
 
+  const footerRows = footerHtmlItems
+    .map((footerHtml, index) => `
+        <tr>
+          <td style="padding:${images.length || index > 0 ? spacing : 0}px 0 0 0;">
+            ${footerHtml}
+          </td>
+        </tr>
+      `)
+    .join("\n");
+
   return `
 <!doctype html>
 <html>
@@ -423,6 +444,7 @@ function buildEmailHtmlFromImageUrls(entries, options = {}) {
         <td align="center" style="padding:0;">
           <table role="presentation" width="${maxWidth}" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:${maxWidth}px;margin:0 auto;">
             ${rows}
+            ${footerRows}
           </table>
         </td>
       </tr>
@@ -755,6 +777,109 @@ async function listAudiences({ accessToken, keyId }) {
   };
 }
 
+function normalizeUniversalContentItem(resource) {
+  const id = resource && resource.id ? String(resource.id) : "";
+  if (!id) {
+    return null;
+  }
+
+  const attributes = resource && resource.attributes && typeof resource.attributes === "object"
+    ? resource.attributes
+    : {};
+  const definition = attributes.definition && typeof attributes.definition === "object"
+    ? attributes.definition
+    : {};
+  const type = typeof definition.type === "string" ? definition.type : "";
+  const name = typeof attributes.name === "string" && attributes.name.trim()
+    ? attributes.name.trim()
+    : `${type || "content"} ${id}`;
+
+  return {
+    id,
+    name,
+    type
+  };
+}
+
+function extractUniversalContentHtml(payload) {
+  const resource = payload && payload.data && typeof payload.data === "object"
+    ? payload.data
+    : payload;
+  const attributes = resource && resource.attributes && typeof resource.attributes === "object"
+    ? resource.attributes
+    : {};
+  const definition = attributes.definition && typeof attributes.definition === "object"
+    ? attributes.definition
+    : {};
+  const data = definition.data && typeof definition.data === "object"
+    ? definition.data
+    : {};
+
+  const directCandidates = [
+    data.content,
+    data.html,
+    attributes.content,
+    attributes.html
+  ];
+
+  for (const candidate of directCandidates) {
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+
+  if (typeof data === "string" && data.trim()) {
+    return data.trim();
+  }
+
+  return "";
+}
+
+async function listUniversalContent({ accessToken, keyId }) {
+  const pages = await listResourcePages({
+    path: "/api/template-universal-content?page[size]=100",
+    accessToken,
+    keyId,
+    maxPages: 20
+  });
+
+  const items = pages.items
+    .map((item) => normalizeUniversalContentItem(item))
+    .filter(Boolean)
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base", numeric: true }));
+
+  const warnings = [];
+  if (pages.hasMore) {
+    warnings.push("Universal content results were truncated at 20 pages.");
+  }
+
+  return {
+    items,
+    warnings
+  };
+}
+
+async function getUniversalContentFooterHtml({ id, accessToken, keyId }) {
+  const universalContentId = typeof id === "string" ? id.trim() : "";
+  if (!universalContentId) {
+    return "";
+  }
+
+  const payload = await klaviyoRequest({
+    path: `/api/template-universal-content/${encodeURIComponent(universalContentId)}`,
+    method: "GET",
+    accessToken,
+    keyId
+  });
+
+  const html = extractUniversalContentHtml(payload);
+  if (!html) {
+    throw new Error(`Universal content '${universalContentId}' does not contain usable HTML content.`);
+  }
+
+  return html;
+}
+
 module.exports = {
   assignTemplateToCampaignMessage,
   createCampaignDraft,
@@ -762,8 +887,10 @@ module.exports = {
   buildEmailHtmlFromImageUrls,
   createTemplate,
   extractCampaignMessageId,
+  getUniversalContentFooterHtml,
   klaviyoRequest,
   listKlaviyoAccounts,
   listAudiences,
+  listUniversalContent,
   uploadImageFromBase64
 };

@@ -82,6 +82,39 @@ function parseButtonKeywords(input) {
   return unique.length ? unique : DEFAULT_BUTTON_KEYWORDS.slice();
 }
 
+function parseIgnoreSectionTokens(input) {
+  const source = Array.isArray(input)
+    ? input
+    : typeof input === "string"
+      ? input.split(/[,\n;]/)
+      : [];
+
+  const normalized = source
+    .map((item) => normalizeLayerName(item).replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+
+  const unique = [];
+  const seen = new Set();
+  for (const token of normalized) {
+    if (!seen.has(token)) {
+      seen.add(token);
+      unique.push(token);
+    }
+  }
+
+  return unique;
+}
+
+function matchTokenInLayerName(name, tokens) {
+  const normalizedName = normalizeLayerName(name);
+  for (const token of tokens) {
+    if (normalizedName.includes(token)) {
+      return token;
+    }
+  }
+  return "";
+}
+
 function isButtonName(name, keywords) {
   const normalizedName = normalizeLayerName(name);
   for (const keyword of keywords) {
@@ -834,6 +867,52 @@ function collectButtons(rootNode, options) {
   return buttons;
 }
 
+function collectIgnoredSections(rootNode, options) {
+  if (!hasBounds(rootNode)) {
+    return [];
+  }
+
+  const opts = options && typeof options === "object" ? options : {};
+  const tokens = parseIgnoreSectionTokens(opts.tokens || opts.ignoreSectionTokens);
+  if (!tokens.length) {
+    return [];
+  }
+
+  const rootBounds = rootNode.absoluteBoundingBox;
+  const stack = [rootNode];
+  const sections = [];
+
+  while (stack.length) {
+    const node = stack.pop();
+    if (!node || !node.visible) {
+      continue;
+    }
+
+    if (node !== rootNode && hasBounds(node)) {
+      const matchedToken = matchTokenInLayerName(node.name, tokens);
+      if (matchedToken) {
+        const bounds = node.absoluteBoundingBox;
+        sections.push({
+          id: node.id,
+          name: node.name,
+          matchedToken,
+          y: bounds.y - rootBounds.y,
+          height: bounds.height
+        });
+      }
+    }
+
+    if ("children" in node && Array.isArray(node.children)) {
+      for (const child of node.children) {
+        stack.push(child);
+      }
+    }
+  }
+
+  sections.sort((a, b) => a.y - b.y);
+  return sections;
+}
+
 function splitRange(top, bottom, maxHeight) {
   const slices = [];
   if (bottom <= top) {
@@ -938,6 +1017,69 @@ function computeSlices(buttons, imageHeight, settings) {
   return output;
 }
 
+function excludeZonesFromSlices(slices, rawZones, imageHeight) {
+  const sourceSlices = Array.isArray(slices) ? slices : [];
+  const zones = mergeProtectedZones(Array.isArray(rawZones) ? rawZones : [], imageHeight);
+  if (!sourceSlices.length || !zones.length) {
+    return sourceSlices.slice();
+  }
+
+  const output = [];
+  for (const sourceSlice of sourceSlices) {
+    let parts = [{
+      top: clamp(Math.floor(sourceSlice.top), 0, imageHeight),
+      bottom: clamp(Math.ceil(sourceSlice.bottom), 0, imageHeight)
+    }].filter((part) => part.bottom > part.top);
+
+    for (const zone of zones) {
+      if (!parts.length) {
+        break;
+      }
+
+      const nextParts = [];
+      for (const part of parts) {
+        if (zone.bottom <= part.top || zone.top >= part.bottom) {
+          nextParts.push(part);
+          continue;
+        }
+
+        if (zone.top > part.top) {
+          nextParts.push({
+            top: part.top,
+            bottom: zone.top
+          });
+        }
+
+        if (zone.bottom < part.bottom) {
+          nextParts.push({
+            top: zone.bottom,
+            bottom: part.bottom
+          });
+        }
+      }
+
+      parts = nextParts
+        .map((part) => ({
+          top: clamp(Math.floor(part.top), 0, imageHeight),
+          bottom: clamp(Math.ceil(part.bottom), 0, imageHeight)
+        }))
+        .filter((part) => part.bottom > part.top);
+    }
+
+    for (const part of parts) {
+      output.push(part);
+    }
+  }
+
+  output.sort((a, b) => {
+    if (a.top !== b.top) {
+      return a.top - b.top;
+    }
+    return a.bottom - b.bottom;
+  });
+  return output;
+}
+
 function postNodeList() {
   figma.ui.postMessage({
     type: "nodes:list",
@@ -985,6 +1127,10 @@ async function runExport(payload) {
   const imageWidth = Math.max(1, Math.round(rootBounds.width * exportScale));
   const imageHeight = Math.max(1, Math.round(rootBounds.height * exportScale));
   const keywords = parseButtonKeywords(payload && payload.buttonKeywords);
+  const ignoreSectionsEnabled = Boolean(payload && payload.ignoreSectionsEnabled);
+  const ignoreSectionTokens = ignoreSectionsEnabled
+    ? parseIgnoreSectionTokens(payload && payload.ignoreSectionTokens)
+    : [];
 
   const buttons = collectButtons(node, {
     defaultTop: DEFAULT_BUTTON_MARGIN,
@@ -992,7 +1138,17 @@ async function runExport(payload) {
     marginOverrides: payload && payload.buttonMargins,
     buttonKeywords: keywords
   });
-  const slices = computeSlices(buttons, imageHeight, { maxHeight, exportScale });
+  const ignoredSections = ignoreSectionsEnabled
+    ? collectIgnoredSections(node, { tokens: ignoreSectionTokens })
+    : [];
+  let slices = computeSlices(buttons, imageHeight, { maxHeight, exportScale });
+  if (ignoredSections.length) {
+    const ignoredZones = ignoredSections.map((section) => ({
+      top: section.y * exportScale,
+      bottom: (section.y + section.height) * exportScale
+    }));
+    slices = excludeZonesFromSlices(slices, ignoredZones, imageHeight);
+  }
 
   const imageBytes = await node.exportAsync({
     format: "PNG",
@@ -1013,6 +1169,9 @@ async function runExport(payload) {
       imageHeight
     },
     buttonKeywords: keywords,
+    ignoreSectionsEnabled,
+    ignoreSectionTokens,
+    ignoredSections,
     buttons,
     slices,
     imageBytes

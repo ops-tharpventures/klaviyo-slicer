@@ -65,6 +65,7 @@
       }
 
       input,
+      textarea,
       select,
       button {
         width: 100%;
@@ -76,9 +77,15 @@
       }
 
       input,
+      textarea,
       select {
         padding: 8px;
         font-size: 12px;
+      }
+
+      textarea {
+        min-height: 88px;
+        resize: vertical;
       }
 
       button {
@@ -316,6 +323,20 @@
       <p class="hint">
         Button detection uses the tokens configured in the Buttons panel.
       </p>
+      <div class="grid" style="margin-top: 8px;">
+        <div>
+          <label for="ignoreSectionsEnabled">Ignore Named Sections</label>
+          <select id="ignoreSectionsEnabled">
+            <option value="0" selected>Off</option>
+            <option value="1">On</option>
+          </select>
+        </div>
+        <div>
+          <label for="ignoreSectionTokens">Ignore Tokens (contains)</label>
+          <input id="ignoreSectionTokens" value="footer" placeholder="footer, rodape" />
+        </div>
+      </div>
+      <p class="hint" id="ignoreSectionsHint">When enabled, layers matching these tokens are removed from slices.</p>
       <div class="mini-actions" style="margin-top: 8px;">
         <button id="runExport" class="primary">Export + Generate Slices</button>
         <button id="downloadZip" class="secondary" disabled>Download ZIP</button>
@@ -381,6 +402,21 @@
         <label for="templateName">Template Name</label>
         <input id="templateName" value="Figma Import" />
       </div>
+      <div class="grid" style="grid-template-columns: 1fr 90px; margin-top: 8px; align-items: end;">
+        <div>
+          <label for="universalFooter">Footer (Universal Content)</label>
+          <select id="universalFooter"></select>
+        </div>
+        <div>
+          <button id="loadUniversalFooter" class="ghost">Load</button>
+        </div>
+      </div>
+      <p class="hint" id="universalFooterHint">Optional footer appended to the bottom of the generated template.</p>
+      <div style="margin-top: 8px;">
+        <label for="customFooterHtml">Custom Footer HTML (optional)</label>
+        <textarea id="customFooterHtml" placeholder="<table>...your footer html...</table>"></textarea>
+      </div>
+      <p class="hint">If provided, this HTML is appended after the image slices and after the selected Universal Content footer.</p>
       <div style="margin-top: 8px;">
         <label>Create In Klaviyo</label>
         <div class="mode-options">
@@ -471,6 +507,7 @@
         nodeSearchTerm: "",
         selectedNodeId: null,
         audiences: [],
+        universalContentItems: [],
         klaviyoAccounts: [],
         detectedButtons: [],
         exportPayload: null,
@@ -494,6 +531,9 @@
         buttonsList: document.getElementById("buttonsList"),
         maxHeight: document.getElementById("maxHeight"),
         exportScale: document.getElementById("exportScale"),
+        ignoreSectionsEnabled: document.getElementById("ignoreSectionsEnabled"),
+        ignoreSectionTokens: document.getElementById("ignoreSectionTokens"),
+        ignoreSectionsHint: document.getElementById("ignoreSectionsHint"),
         runExport: document.getElementById("runExport"),
         refreshNodes: document.getElementById("refreshNodes"),
         closePlugin: document.getElementById("closePlugin"),
@@ -508,6 +548,10 @@
         outputFormat: document.getElementById("outputFormat"),
         jpegQuality: document.getElementById("jpegQuality"),
         templateName: document.getElementById("templateName"),
+        universalFooter: document.getElementById("universalFooter"),
+        loadUniversalFooter: document.getElementById("loadUniversalFooter"),
+        universalFooterHint: document.getElementById("universalFooterHint"),
+        customFooterHtml: document.getElementById("customFooterHtml"),
         modeTemplateOnly: document.getElementById("modeTemplateOnly"),
         modeTemplateCampaign: document.getElementById("modeTemplateCampaign"),
         campaignFields: document.getElementById("campaignFields"),
@@ -835,6 +879,36 @@
         return unique.length ? unique : DEFAULT_BUTTON_KEYWORDS.slice();
       }
 
+      function getIgnoreSectionsEnabled() {
+        return String(els.ignoreSectionsEnabled.value || "0").trim() === "1";
+      }
+
+      function getIgnoreSectionTokens() {
+        const source = String(els.ignoreSectionTokens.value || "")
+          .split(/[,\n;]/)
+          .map((item) => item.trim().toLowerCase())
+          .filter(Boolean);
+
+        const unique = [];
+        const seen = new Set();
+        for (const token of source) {
+          if (!seen.has(token)) {
+            seen.add(token);
+            unique.push(token);
+          }
+        }
+
+        return unique;
+      }
+
+      function syncIgnoreSectionControls() {
+        const enabled = getIgnoreSectionsEnabled();
+        els.ignoreSectionTokens.disabled = !enabled;
+        els.ignoreSectionsHint.textContent = enabled
+          ? "Layers matching these tokens are removed from slices before preview/send."
+          : "Ignore mode is off. All Figma sections are included in slices.";
+      }
+
       function normalizeProxyBaseUrl(value) {
         return String(value || "").trim().replace(/\/+$/, "");
       }
@@ -849,6 +923,10 @@
 
       function getSelectedKlaviyoAccountId() {
         return String(els.klaviyoAccount.value || "").trim();
+      }
+
+      function getSelectedUniversalFooterId() {
+        return String(els.universalFooter.value || "").trim();
       }
 
       function normalizeKlaviyoAccounts(accounts) {
@@ -893,6 +971,104 @@
         els.klaviyoAccount.value = selected ? selected.id : "";
       }
 
+      function normalizeUniversalContentItems(items) {
+        const source = Array.isArray(items) ? items : [];
+        return source
+          .map((item) => ({
+            id: String(item && item.id ? item.id : "").trim(),
+            name: String(item && item.name ? item.name : "").trim(),
+            type: String(item && item.type ? item.type : "").trim()
+          }))
+          .filter((item) => item.id);
+      }
+
+      function renderUniversalContentOptions(items, preferredId) {
+        const previousId = typeof preferredId === "string" && preferredId.trim()
+          ? preferredId.trim()
+          : getSelectedUniversalFooterId();
+
+        state.universalContentItems = normalizeUniversalContentItems(items);
+        els.universalFooter.innerHTML = "";
+
+        const noneOption = document.createElement("option");
+        noneOption.value = "";
+        noneOption.textContent = "None";
+        els.universalFooter.appendChild(noneOption);
+
+        for (const item of state.universalContentItems) {
+          const option = document.createElement("option");
+          option.value = item.id;
+          option.textContent = item.type
+            ? `${item.name} (${item.type})`
+            : item.name;
+          els.universalFooter.appendChild(option);
+        }
+
+        if (previousId && state.universalContentItems.some((item) => item.id === previousId)) {
+          els.universalFooter.value = previousId;
+          return;
+        }
+
+        els.universalFooter.value = "";
+      }
+
+      async function loadUniversalContent(options) {
+        const opts = options && typeof options === "object" ? options : {};
+        const silent = Boolean(opts.silent);
+        const skipEnsureAccounts = Boolean(opts.skipEnsureAccounts);
+
+        const baseUrl = getProxyBaseUrl();
+        if (!baseUrl) {
+          if (!silent) {
+            setStatus("Set Proxy Base URL first.", "error");
+          }
+          return false;
+        }
+        const proxySecret = getProxySecret();
+        if (!proxySecret) {
+          if (!silent) {
+            setStatus("Set Proxy Secret first.", "error");
+          }
+          return false;
+        }
+
+        if (!skipEnsureAccounts && !state.klaviyoAccounts.length) {
+          await loadKlaviyoAccounts({ silent: true });
+        }
+
+        if (!silent) {
+          setStatus("Loading universal content...", null);
+        }
+        els.loadUniversalFooter.disabled = true;
+
+        try {
+          const previousId = getSelectedUniversalFooterId();
+          const payload = await callProxy("/api/klaviyo/universal-content", {
+            method: "GET"
+          });
+          const items = Array.isArray(payload.items) ? payload.items : [];
+          renderUniversalContentOptions(items, previousId);
+          const warnings = Array.isArray(payload.warnings) ? payload.warnings.filter(Boolean) : [];
+          els.universalFooterHint.textContent = warnings.length
+            ? warnings.join(" ")
+            : state.universalContentItems.length
+              ? `${state.universalContentItems.length} universal content item(s) loaded.`
+              : "No universal content found for this account.";
+          if (!silent) {
+            setStatus(`${state.universalContentItems.length} universal content item(s) loaded.`, "ok");
+          }
+          return true;
+        } catch (error) {
+          if (!silent) {
+            setStatus(error.message || "Failed to load universal content.", "error");
+          }
+          els.universalFooterHint.textContent = "Failed to load universal content.";
+          return false;
+        } finally {
+          els.loadUniversalFooter.disabled = false;
+        }
+      }
+
       async function loadKlaviyoAccounts(options) {
         const opts = options && typeof options === "object" ? options : {};
         const silent = Boolean(opts.silent);
@@ -924,6 +1100,7 @@
           });
           const accounts = Array.isArray(payload.accounts) ? payload.accounts : [];
           renderKlaviyoAccounts(accounts, preferredId);
+          await loadUniversalContent({ silent: true, skipEnsureAccounts: true });
           if (!silent) {
             setStatus(`${state.klaviyoAccounts.length} Klaviyo account(s) loaded.`, "ok");
           }
@@ -1554,6 +1731,9 @@
           root: state.exportPayload.root,
           defaultButtonMargin: state.exportPayload.defaultButtonMargin,
           buttonKeywords: Array.isArray(state.exportPayload.buttonKeywords) ? state.exportPayload.buttonKeywords : getButtonKeywords(),
+          ignoreSectionsEnabled: Boolean(state.exportPayload.ignoreSectionsEnabled),
+          ignoreSectionTokens: Array.isArray(state.exportPayload.ignoreSectionTokens) ? state.exportPayload.ignoreSectionTokens : [],
+          ignoredSections: Array.isArray(state.exportPayload.ignoredSections) ? state.exportPayload.ignoredSections : [],
           exportScale: state.exportPayload.exportScale,
           maxHeight: readInt(els.maxHeight.value, state.exportPayload.maxHeight || 1400),
           output,
@@ -1600,12 +1780,13 @@
         const imageHeight = payload.root.imageHeight;
         const maxHeight = clamp(readInt(els.maxHeight.value, payload.maxHeight || 1400), 1, 100000);
         state.slices = normalizeSlices(payload.slices, imageHeight, maxHeight);
+        const ignoredSections = Array.isArray(payload.ignoredSections) ? payload.ignoredSections : [];
 
         await rebuildCuts();
         setExportButtonsEnabled(true);
 
         setStatus(
-          `Export completed (${payload.exportScale}x): ${payload.root.imageWidth}x${payload.root.imageHeight}px, ${payload.buttons.length} buttons, ${state.cuts.length} slices.`,
+          `Export completed (${payload.exportScale}x): ${payload.root.imageWidth}x${payload.root.imageHeight}px, ${payload.buttons.length} buttons, ${state.cuts.length} slices${ignoredSections.length ? `, ${ignoredSections.length} ignored section(s)` : ""}.`,
           "ok"
         );
       }
@@ -1629,6 +1810,7 @@
         const mode = getKlaviyoMode();
         const shouldCreateDraftCampaign = mode === "campaign";
         const templateName = String(els.templateName.value || "").trim() || `${state.exportPayload.root.name} Import`;
+        const customFooterHtml = String(els.customFooterHtml.value || "").trim();
         const campaign = shouldCreateDraftCampaign ? getCampaignSettings(templateName) : null;
 
         if (shouldCreateDraftCampaign) {
@@ -1665,6 +1847,8 @@
             templateName,
             nodeName: state.exportPayload.root.name,
             campaign,
+            universalContentFooterId: getSelectedUniversalFooterId() || null,
+            customFooterHtml: customFooterHtml || null,
             maxWidth: output.settings.maxWidth,
             images: output.files.map((file) => ({
               filename: file.filename,
@@ -1727,16 +1911,29 @@
             renderCuts();
           }
         });
+        els.ignoreSectionsEnabled.addEventListener("change", () => {
+          syncIgnoreSectionControls();
+        });
 
         els.loadKlaviyoAccounts.addEventListener("click", () => {
           loadKlaviyoAccounts();
         });
+        els.loadUniversalFooter.addEventListener("click", () => {
+          loadUniversalContent();
+        });
+        els.klaviyoAccount.addEventListener("change", () => {
+          loadUniversalContent({ silent: true, skipEnsureAccounts: true });
+        });
 
         els.proxyBaseUrl.addEventListener("change", () => {
           renderKlaviyoAccounts([]);
+          renderUniversalContentOptions([]);
+          els.universalFooterHint.textContent = "Optional footer appended to the bottom of the generated template.";
         });
         els.proxySecret.addEventListener("change", () => {
           renderKlaviyoAccounts([]);
+          renderUniversalContentOptions([]);
+          els.universalFooterHint.textContent = "Optional footer appended to the bottom of the generated template.";
         });
 
         els.modeTemplateOnly.addEventListener("change", () => {
@@ -1809,6 +2006,13 @@
             return;
           }
 
+          const ignoreSectionsEnabled = getIgnoreSectionsEnabled();
+          const ignoreSectionTokens = getIgnoreSectionTokens();
+          if (ignoreSectionsEnabled && !ignoreSectionTokens.length) {
+            setStatus("Add at least one ignore token (for example: footer) or turn ignore mode off.", "error");
+            return;
+          }
+
           setStatus("Processing selected design...", null);
           setExportButtonsEnabled(false);
           postPluginMessage("export:run", {
@@ -1816,7 +2020,9 @@
             maxHeight: readInt(els.maxHeight.value, 1400),
             exportScale: Number(els.exportScale.value || "2"),
             buttonMargins: buildButtonMarginsMap(),
-            buttonKeywords: getButtonKeywords()
+            buttonKeywords: getButtonKeywords(),
+            ignoreSectionsEnabled,
+            ignoreSectionTokens
           });
         });
 
@@ -1919,7 +2125,9 @@
       renderButtonsList();
       renderAudiencePicker();
       renderKlaviyoAccounts([]);
+      renderUniversalContentOptions([]);
       syncOutputControls();
+      syncIgnoreSectionControls();
       syncKlaviyoMode();
       setExportButtonsEnabled(false);
       if (getProxyBaseUrl() && getProxySecret()) {

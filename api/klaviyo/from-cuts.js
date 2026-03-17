@@ -5,6 +5,7 @@ const {
   buildEmailHtmlFromImageUrls,
   createTemplate,
   extractCampaignMessageId,
+  getUniversalContentFooterHtml,
   uploadImageFromBase64
 } = require("../_lib/klaviyo");
 const { handlePreflight, headerValue, readJsonBody, requireProxySecret, sendError, sendJson } = require("../_lib/http");
@@ -61,6 +62,12 @@ module.exports = async function handler(req, res) {
     const spacing = Number.isFinite(body.spacing) ? body.spacing : 0;
     const backgroundColor = typeof body.backgroundColor === "string" ? body.backgroundColor : "#ffffff";
     const accessToken = typeof body.accessToken === "string" && body.accessToken.trim() ? body.accessToken.trim() : null;
+    const universalContentFooterId = typeof body.universalContentFooterId === "string"
+      ? body.universalContentFooterId.trim()
+      : "";
+    const customFooterHtml = typeof body.customFooterHtml === "string"
+      ? body.customFooterHtml.trim()
+      : "";
     const campaignInput = body && body.campaign && typeof body.campaign === "object" ? body.campaign : {};
     const shouldCreateDraftCampaign = body.createDraftCampaign !== false;
 
@@ -92,7 +99,28 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    const html = buildEmailHtmlFromImageUrls(uploaded, { backgroundColor, spacing, maxWidth });
+    const footerHtmlItems = [];
+    if (universalContentFooterId) {
+      stage = "load-universal-content";
+      const universalFooterHtml = await getUniversalContentFooterHtml({
+        id: universalContentFooterId,
+        accessToken,
+        keyId
+      });
+      if (universalFooterHtml) {
+        footerHtmlItems.push(universalFooterHtml);
+      }
+    }
+    if (customFooterHtml) {
+      footerHtmlItems.push(customFooterHtml);
+    }
+
+    const html = buildEmailHtmlFromImageUrls(uploaded, {
+      backgroundColor,
+      spacing,
+      maxWidth,
+      footerHtmlItems
+    });
 
     stage = "create-template";
     const templateResponse = await createTemplate({
